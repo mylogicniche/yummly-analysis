@@ -9,7 +9,7 @@ import nltk
 
 ratingDict = {}
 
-conn = sqlite3.connect('recipes.db')
+conn = sqlite3.connect('../db/recipes.db')
 c = conn.cursor()
 
 c.execute('SELECT * from recipes;')
@@ -26,16 +26,29 @@ for row in rows:
     t = row[5]
     if t:
         timelist.append(t)
-    c.execute("""SELECT value from nutrition where attr='ENERC_KCAL' and recipeidf=?""", (id,))
-    nuts = c.fetchall()
-    if nuts:
-        cal = nuts[0][0]
-        if cal >= 10:
-            calorielist.append(nuts[0])
-    pass
+
+c.execute("SELECT recipeidf, value from nutrition where attr='ENERC_KCAL'")
+nuts = c.fetchall()
+calDict = {}
+callist = []
+for row in nuts:
+    cal = row[1]
+    if cal >= 30:
+        callist.append(cal)
+    calDict.update({row[0]:cal})
 
 mntime = min(timelist)
-mncal = min(calorielist)
+mncal = min(callist)
+
+c.execute("SELECT recipeidf, value from nutrition where attr='FIBTG' ORDER BY value DESC")
+nuts = c.fetchall()
+mxfiber = nuts[0][1]
+
+print('mxfiber', mxfiber)
+
+fiberDict = {}
+for row in nuts:
+    fiberDict.update({row[0]:row[1]})
 
 for row in rows:
     id = row[0]
@@ -44,10 +57,16 @@ for row in rows:
         ratingDict[row[0]]["preptime"] = int((mntime / t) * 10)
     rating = row[3]
     ratingDict[id]["userrating"] = rating
-    c.execute("""SELECT value from nutrition where attr='ENERC_KCAL' and recipeidf=?""", (id,))
-    nuts = c.fetchall()
-    cal = nuts[0]
-    ratingDict[id]["calorie"] = int((mncal / cal) * 10)
+    try:
+        cal = calDict[id]
+        ratingDict[id]["calorie"] = int((mncal / cal) * 10)
+    except:
+        pass
+
+    try:
+        ratingDict[id]["fiber"] = int(fiberDict[id]/mxfiber)
+    except:
+        pass
 
 print(mntime)
 
