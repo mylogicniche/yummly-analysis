@@ -7,6 +7,21 @@ import csv
 from nltk import pos_tag
 import nltk
 
+phytochemicals = {
+ 'Allyl-sulphides':['Onion', 'garlic', 'chives', 'leek'],
+ 'Sulforaphanes-indoles':['Broccoli', 'Brussels sprout', 'cabbage', 'cauliflower'],
+ 'Lutein-zeaxanthin':['Asparagus', 'collard green', 'spinach', 'winter squash'],
+ 'Cryptoxanthin-flavonoids': ['Cantaloupe', 'nectarines', 'orange', 'papaya', 'peaches'],
+ 'Alpha-beta-carotenes':['Carrot', 'mango', 'pumpkin'],
+ 'Anthocyanins-polyphenols': ['Berries', 'grape', 'plums'],
+ 'Lycopene':['Tomatoes', 'pink', 'grapefruit', 'watermelon'],
+ 'Extra': ['beet', 'beet root', 'beetroot', 'rutabaga', 'radishes', 'grean bean', 'goji berry', 'blueberry','strawberry',
+           'Acai Berries', 'Bilberries','Blackberries','Cherries','Pecans','Cranberries','Cilantro','pecans'],
+ 'Herb_Antioxidants': ['Clove','Cinnamon','Oregano','turmeric','cocoa','cumin','parsley','basil','ginger','thyme']
+}
+
+singlelist = ["ice", "kale", "spinach", "yogurt", "lime"]
+
 ratingDict = {}
 
 conn = sqlite3.connect('../db/recipes.db')
@@ -68,6 +83,71 @@ for row in rows:
     except:
         pass
 
-print(mntime)
+    try:
+        ratingDict[id]["fiberpercalorie"] = fiberDict[id] / calDict[id]
+    except:
+        pass
+
+wnl = nltk.stem.WordNetLemmatizer()
+cancer_preventers = []
+for l in phytochemicals.values():
+    cancer_preventers.extend([wnl.lemmatize(p.lower()) for p in l])
+
+def find_recipes_for_health(recipeDict, preventer, fname, prevType):
+    intersectionPerRecipe = {}
+    for key, val in recipeDict.items():
+        inter = set(val).intersection(set(preventer))
+        intersectionPerRecipe.update({key : [inter, len(inter)]})
+
+    SortedintersectionPerRecipe = sorted(intersectionPerRecipe.items(), key = lambda x: x[1][1], reverse = True)
+
+    with open(fname, "w") as f:
+        fields = ["id", "name", "ingreds", "preventives", "prevnumber", "time", "rating", "url"]
+        writer = csv.DictWriter(f, fieldnames=fields)
+        writer.writeheader()
+        for r in SortedintersectionPerRecipe:
+            id = r[0]
+            c.execute("SELECT * FROM recipes WHERE ID=?", (id,))
+            rows = c.fetchall()
+            name = rows[0][1]
+            ingreds = rows[0][2]
+            rating = rows[0][3]
+            time = rows[0][5]
+            url = rows[0][6]
+            writer.writerow({"id":id, "name":name, "ingreds":ingreds, "preventives":str(r[1][0]),
+                             "prevnumber":r[1][1], "time":time, "rating":rating, "url":url })
+
+            ratingDict[id][prevType] = r[1][1]
+
+c.execute('SELECT ID,Ingredients from recipes;')
+
+allIngredListRow = c.fetchall()
+
+allIngredList = []
+ingredListsPerRecipe = []
+ingredDictPerRecipe = {}
+for ingredListRow in allIngredListRow:
+    l = ast.literal_eval(ingredListRow[1])
+    for i in l:
+        low = [x.lower() for x in i.split()]
+        tagged_sent = pos_tag([wnl.lemmatize(x) for x in low])
+        ta = [word for word, pos in tagged_sent if pos == 'NN' or pos == 'NNS']
+        if len(ta) == 0:
+            continue
+
+        s = " ".join(ta)
+
+        for item in singlelist:
+            if item in ta:
+                s = item
+                break
+
+        l[l.index(i)] = s
+
+
+    allIngredList.extend(l)
+    ingredListsPerRecipe.append(l)
+    ingredDictPerRecipe.update({ingredListRow[0]:l})
+find_recipes_for_health(ingredDictPerRecipe, cancer_preventers, "cancer.csv", "antiox")
 
 pass
