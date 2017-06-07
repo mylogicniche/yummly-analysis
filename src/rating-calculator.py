@@ -20,6 +20,19 @@ phytochemicals = {
  'Herb_Antioxidants': ['Clove','Cinnamon','Oregano','turmeric','cocoa','cumin','parsley','basil','ginger','thyme']
 }
 
+skin = ["olive","tomato","chocolate","oatmeal","tea","kale","walnut","orange peel","lemon peel","rosemary","almond milk",
+        "water","ice","soy","bell","cofee","kiwi","egg","pumpkin","wine","carrot","chickpee","avocado","pomegranate","bean",
+        "sweet potato","broccoli",""]
+
+hangover = ["coconut","coconut milk","coconut water","asparagus","ginger","tomato","lemon","lemon juice","banana",
+            "egg","cayenne pepper","honey","coffee"]
+
+constipation = ["bean","kiwi","sweet potato","walnut","nut","pear","plum","apple","berry","strawberry","flaxseed",
+                "broccoli","prune"]
+
+cold = ["garlic","orange juice","lemon juice", "fennel seed","fennel","fennel bulb","yogurt","kefir","tea","red pepper",
+        "milk","mushroom","arugula","blueberry","brazil nut","carrot","sweet potato","oat",""]
+
 singlelist = ["ice", "kale", "spinach", "yogurt", "lime"]
 
 ratingDict = {}
@@ -32,7 +45,7 @@ rows = c.fetchall()
 
 for row in rows:
     ratingDict.update({row[0]: {"preptime":0, "skincare": 0, "antiox":0, "userrating":0, "fiber":0,
-                                "calorie":0, "fiberpercalorie":0}})
+                                "calorie":0, "fiberpercalorie":0, "constipation":0, "cold":0, "hangover":0}})
 #calc prep time rating
 timelist = []
 calorielist = []
@@ -101,7 +114,8 @@ def find_recipes_for_health(recipeDict, preventer, fname, prevType):
 
     SortedintersectionPerRecipe = sorted(intersectionPerRecipe.items(), key = lambda x: x[1][1], reverse = True)
 
-    with open(fname, "w") as f:
+
+    with open('../out/' + fname, "w") as f:
         fields = ["id", "name", "ingreds", "preventives", "prevnumber", "time", "rating", "url"]
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
@@ -116,6 +130,7 @@ def find_recipes_for_health(recipeDict, preventer, fname, prevType):
             url = rows[0][6]
             writer.writerow({"id":id, "name":name, "ingreds":ingreds, "preventives":str(r[1][0]),
                              "prevnumber":r[1][1], "time":time, "rating":rating, "url":url })
+
 
             ratingDict[id][prevType] = r[1][1]
 
@@ -148,6 +163,22 @@ for ingredListRow in allIngredListRow:
     allIngredList.extend(l)
     ingredListsPerRecipe.append(l)
     ingredDictPerRecipe.update({ingredListRow[0]:l})
+
 find_recipes_for_health(ingredDictPerRecipe, cancer_preventers, "cancer.csv", "antiox")
+find_recipes_for_health(ingredDictPerRecipe, skin, "skin.csv", "skincare")
+find_recipes_for_health(ingredDictPerRecipe, constipation, "constipation.csv", "constipation")
+find_recipes_for_health(ingredDictPerRecipe, cold, "cold.csv", "cold")
+find_recipes_for_health(ingredDictPerRecipe, hangover, "hangover.csv", "hangover")
+
+with open('../out/allraiting.csv', "w") as f:
+    fields = ["id", "calorie", "cold", "fiberpercalorie", "userrating", "constipation", "fiber", "preptime", "antiox",
+              "hangover", "skincare"]
+    writer = csv.DictWriter(f, fieldnames=fields)
+    writer.writeheader()
+    for id,ratings in ratingDict.items():
+        writer.writerow({'id':id, "calorie":ratings["calorie"], "cold":ratings["cold"],
+                         "fiberpercalorie":ratings["fiberpercalorie"], "userrating":ratings["userrating"],
+                         "constipation":ratings["constipation"], "fiber":ratings["fiber"], "preptime":ratings["preptime"],
+                         "antiox":ratings["antiox"], "hangover":ratings["hangover"], "skincare":ratings["skincare"]})
 
 pass
