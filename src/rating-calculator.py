@@ -45,7 +45,7 @@ rows = c.fetchall()
 
 for row in rows:
     ratingDict.update({row[0]: {"preptime":0, "skincare": 0, "antiox":0, "userrating":0, "fiber":0,
-                                "calorie":0, "fiberpercalorie":0, "constipation":0, "cold":0, "hangover":0}})
+                                "calorie":0, "fiberpercalorie":0, "constipation":0, "cold":0, "hangover":0, "overall":0}})
 #calc prep time rating
 timelist = []
 calorielist = []
@@ -78,6 +78,13 @@ fiberDict = {}
 for row in nuts:
     fiberDict.update({row[0]:row[1]})
 
+fiberPerCalDict = {}
+
+for id, fiber in fiberDict.items():
+    fiberPerCalDict.update({id:fiber/calDict[id]})
+
+mxfiberpercal = max(list(fiberPerCalDict.values()))
+
 for row in rows:
     id = row[0]
     t = row[5]
@@ -87,17 +94,22 @@ for row in rows:
     ratingDict[id]["userrating"] = rating
     try:
         cal = calDict[id]
-        ratingDict[id]["calorie"] = int((mncal / cal) * 10)
+        if cal > 30:
+            ratingDict[id]["calorie"] = int((mncal / cal) * 10)
     except:
         pass
 
     try:
-        ratingDict[id]["fiber"] = int(fiberDict[id]/mxfiber)
+        ratingDict[id]["fiber"] = int(10 * fiberDict[id]/mxfiber)
     except:
         pass
 
+
     try:
-        ratingDict[id]["fiberpercalorie"] = fiberDict[id] / calDict[id]
+        fber = fiberDict[id]
+        cal = calDict[id]
+        fpercal = int(10 * (fber / cal) / mxfiberpercal)
+        ratingDict[id]["fiberpercalorie"] = fpercal
     except:
         pass
 
@@ -170,15 +182,20 @@ find_recipes_for_health(ingredDictPerRecipe, constipation, "constipation.csv", "
 find_recipes_for_health(ingredDictPerRecipe, cold, "cold.csv", "cold")
 find_recipes_for_health(ingredDictPerRecipe, hangover, "hangover.csv", "hangover")
 
+for id, ratings in ratingDict.copy().items():
+    m = numpy.mean(numpy.array(list(ratings.values())))
+    ratingDict[id]["overall"] = m
+
 with open('../out/allraiting.csv', "w") as f:
     fields = ["id", "calorie", "cold", "fiberpercalorie", "userrating", "constipation", "fiber", "preptime", "antiox",
-              "hangover", "skincare"]
+              "hangover", "skincare", "overall"]
     writer = csv.DictWriter(f, fieldnames=fields)
     writer.writeheader()
     for id,ratings in ratingDict.items():
         writer.writerow({'id':id, "calorie":ratings["calorie"], "cold":ratings["cold"],
                          "fiberpercalorie":ratings["fiberpercalorie"], "userrating":ratings["userrating"],
                          "constipation":ratings["constipation"], "fiber":ratings["fiber"], "preptime":ratings["preptime"],
-                         "antiox":ratings["antiox"], "hangover":ratings["hangover"], "skincare":ratings["skincare"]})
+                         "antiox":ratings["antiox"], "hangover":ratings["hangover"], "skincare":ratings["skincare"],
+                         "overall":ratings["overall"]})
 
 pass
