@@ -126,6 +126,7 @@ def find_recipes_for_health(recipeDict, preventer, fname, prevType):
 
     SortedintersectionPerRecipe = sorted(intersectionPerRecipe.items(), key = lambda x: x[1][1], reverse = True)
 
+    mxprevno = max([l[1] for l in list(intersectionPerRecipe.values())])
 
     with open('../out/' + fname, "w") as f:
         fields = ["id", "name", "ingreds", "preventives", "prevnumber", "time", "rating", "url"]
@@ -140,11 +141,13 @@ def find_recipes_for_health(recipeDict, preventer, fname, prevType):
             rating = rows[0][3]
             time = rows[0][5]
             url = rows[0][6]
-            writer.writerow({"id":id, "name":name, "ingreds":ingreds, "preventives":str(r[1][0]),
-                             "prevnumber":r[1][1], "time":time, "rating":rating, "url":url })
+            prevrating = int(10 * r[1][1] / mxprevno)
+            d = {"id":id.encode('utf8'), "name":name.encode('utf8'), "ingreds":ingreds.encode('utf8'),
+                 "preventives":str(r[1][0]).encode('utf8'),
+                 "prevnumber":r[1][1], "time":time, "rating":rating, "url":url.encode('utf8') }
+            writer.writerow(d)
 
-
-            ratingDict[id][prevType] = r[1][1]
+            ratingDict[id][prevType] = prevrating
 
 c.execute('SELECT ID,Ingredients from recipes;')
 
