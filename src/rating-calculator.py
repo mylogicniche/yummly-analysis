@@ -44,7 +44,7 @@ c.execute('SELECT * from recipes;')
 rows = c.fetchall()
 
 for row in rows:
-    ratingDict.update({row[0]: {"preptime":0, "skincare": 0, "antiox":0, "userrating":0, "fiber":0,
+    ratingDict.update({tuple([row[0],row[6]]): {"preptime":0, "skincare": 0, "antiox":0, "userrating":0, "fiber":0,
                                 "calorie":0, "fiberpercalorie":0, "constipation":0, "cold":0, "hangover":0, "overall":0}})
 #calc prep time rating
 timelist = []
@@ -88,19 +88,20 @@ mxfiberpercal = max(list(fiberPerCalDict.values()))
 for row in rows:
     id = row[0]
     t = row[5]
+    url = row[6]
     if t:
-        ratingDict[row[0]]["preptime"] = int((mntime / t) * 10)
+        ratingDict[tuple([id, url])]["preptime"] = int((mntime / t) * 10)
     rating = row[3]
-    ratingDict[id]["userrating"] = rating
+    ratingDict[tuple([id, url])]["userrating"] = rating
     try:
         cal = calDict[id]
         if cal > 30:
-            ratingDict[id]["calorie"] = int((mncal / cal) * 10)
+            ratingDict[tuple([id, url])]["calorie"] = int((mncal / cal) * 10)
     except:
         pass
 
     try:
-        ratingDict[id]["fiber"] = int(10 * fiberDict[id]/mxfiber)
+        ratingDict[tuple([id, url])]["fiber"] = int(10 * fiberDict[id]/mxfiber)
     except:
         pass
 
@@ -109,7 +110,7 @@ for row in rows:
         fber = fiberDict[id]
         cal = calDict[id]
         fpercal = int(10 * (fber / cal) / mxfiberpercal)
-        ratingDict[id]["fiberpercalorie"] = fpercal
+        ratingDict[tuple([id, url])]["fiberpercalorie"] = fpercal
     except:
         pass
 
@@ -117,6 +118,8 @@ wnl = nltk.stem.WordNetLemmatizer()
 cancer_preventers = []
 for l in phytochemicals.values():
     cancer_preventers.extend([wnl.lemmatize(p.lower()) for p in l])
+
+print(cancer_preventers)
 
 def find_recipes_for_health(recipeDict, preventer, fname, prevType):
     intersectionPerRecipe = {}
@@ -147,7 +150,7 @@ def find_recipes_for_health(recipeDict, preventer, fname, prevType):
                  "prevnumber":r[1][1], "time":time, "rating":rating, "url":url.encode('utf8') }
             writer.writerow(d)
 
-            ratingDict[id][prevType] = prevrating
+            ratingDict[tuple([id, url])][prevType] = prevrating
 
 c.execute('SELECT ID,Ingredients from recipes;')
 
@@ -179,6 +182,8 @@ for ingredListRow in allIngredListRow:
     ingredListsPerRecipe.append(l)
     ingredDictPerRecipe.update({ingredListRow[0]:l})
 
+print("unique ingredients: ", len(list(set(allIngredList))))
+
 find_recipes_for_health(ingredDictPerRecipe, cancer_preventers, "cancer.csv", "antiox")
 find_recipes_for_health(ingredDictPerRecipe, skin, "skin.csv", "skincare")
 find_recipes_for_health(ingredDictPerRecipe, constipation, "constipation.csv", "constipation")
@@ -190,12 +195,12 @@ for id, ratings in ratingDict.copy().items():
     ratingDict[id]["overall"] = m
 
 with open('../out/allraiting.csv', "w") as f:
-    fields = ["id", "calorie", "cold", "fiberpercalorie", "userrating", "constipation", "fiber", "preptime", "antiox",
+    fields = ["id", "url", "calorie", "cold", "fiberpercalorie", "userrating", "constipation", "fiber", "preptime", "antiox",
               "hangover", "skincare", "overall"]
     writer = csv.DictWriter(f, fieldnames=fields)
     writer.writeheader()
     for id,ratings in ratingDict.items():
-        writer.writerow({'id':id, "calorie":ratings["calorie"], "cold":ratings["cold"],
+        writer.writerow({'id':id[0], 'url':id[1], "calorie":ratings["calorie"], "cold":ratings["cold"],
                          "fiberpercalorie":ratings["fiberpercalorie"], "userrating":ratings["userrating"],
                          "constipation":ratings["constipation"], "fiber":ratings["fiber"], "preptime":ratings["preptime"],
                          "antiox":ratings["antiox"], "hangover":ratings["hangover"], "skincare":ratings["skincare"],

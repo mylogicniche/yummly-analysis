@@ -6,6 +6,9 @@ from itertools import combinations
 import csv
 from nltk import pos_tag
 import nltk
+import matplotlib.pyplot as plt
+import matplotlib.mlab as mlab
+import numpy as np
 
 query_ingredients = 'SELECT ID,Ingredients from recipes;'
 query_calories = 'SELECT * FROM nutrition WHERE attr="ENERC_KCAL" ORDER BY value ASC;'
@@ -49,7 +52,7 @@ cancer_preventers = []
 for l in phytochemicals.values():
     cancer_preventers.extend([wnl.lemmatize(p.lower()) for p in l])
 
-conn = sqlite3.connect('recipes.db')
+conn = sqlite3.connect('../db/recipes.db')
 
 c = conn.cursor()
 
@@ -88,7 +91,7 @@ with open("coverage.csv", "w") as f:
             nutlist.append(r[0])
         l = len(set(nutlist))
         s = str(set(nutlist))
-        writer.writerow({'name':name, 'number':l, "raiting":raiting, 'link':link, 'list':s})
+        writer.writerow({'name':name.encode('utf-8'), 'number':l, "raiting":raiting, 'link':link.encode('utf-8'), 'list':s.encode('utf-8')})
         i += 1
         if i >= 500:
             break
@@ -171,8 +174,8 @@ def find_recipes_for_health(recipeDict, preventer, fname):
             rating = rows[0][3]
             time = rows[0][5]
             url = rows[0][6]
-            writer.writerow({"id":id, "name":name, "ingreds":ingreds, "preventives":str(r[1][0]),
-                             "prevnumber":r[1][1], "time":time, "rating":rating, "url":url })
+            writer.writerow({"id":id.encode('utf-8'), "name":name.encode('utf-8'), "ingreds":ingreds.encode('utf-8'), "preventives":str(r[1][0]).encode('utf-8'),
+                             "prevnumber":r[1][1], "time":time, "rating":rating, "url":url.encode('utf-8') })
 
 
     print(SortedintersectionPerRecipe)
@@ -187,9 +190,11 @@ find_recipes_for_health(ingredDictPerRecipe, constipation, "constipation.csv")
 #http://www.health.com/health/gallery/0,,20631007,00.html
 find_recipes_for_health(ingredDictPerRecipe, cold, "cold.csv")
 
+"""
 with open('ingredients.txt', 'w') as f:
     for ingred in counts.items():
         f.writelines(str(ingred) + '\n')
+"""
 
 c.execute(query_calories)
 
@@ -218,8 +223,8 @@ with open("calorie.csv", "w") as f:
         rating = recs[0][3]
         time = recs[0][5]
         url = recs[0][6]
-        writer.writerow({"id":id, "name":name, "calorie":calorie, "ingreds":ingreds,
-                         "time":time, "rating":raiting, "url":url})
+        writer.writerow({"id":id.encode('utf-8'), "name":name.encode('utf-8'), "calorie":calorie, "ingreds":ingreds.encode('utf-8'),
+                         "time":time, "rating":raiting, "url":url.encode('utf-8')})
 
 c.execute(query_fiber)
 rows = c.fetchall()
@@ -238,8 +243,8 @@ with open("fiber.csv", "w") as f:
         rating = recs[0][3]
         time = recs[0][5]
         url = recs[0][6]
-        writer.writerow({"id":id, "name":name, "fiber":fiber, "ingreds":ingreds,
-                         "time":time, "rating":raiting, "url":url})
+        writer.writerow({"id":id.encode('utf-8'), "name":name.encode('utf-8'), "fiber":fiber, "ingreds":ingreds.encode('utf-8'),
+                         "time":time, "rating":raiting, "url":url.encode('utf-8')})
 
 with open("fiber_per_calorie.csv", "w") as f:
     fields = ["id", "name", "fiberPerCalorie", "ingreds", "time", "rating", "url"]
@@ -261,8 +266,8 @@ with open("fiber_per_calorie.csv", "w") as f:
         time = recs[0][5]
         url = recs[0][6]
         fiberPerCalorie = fiber/calorie
-        writer.writerow({"id":id, "name":name, "fiberPerCalorie":str(fiberPerCalorie), "ingreds":ingreds,
-                         "time":time, "rating":raiting, "url":url})
+        writer.writerow({"id":id.encode('utf-8'), "name":name.encode('utf-8'), "fiberPerCalorie":str(fiberPerCalorie), "ingreds":ingreds.encode('utf-8'),
+                         "time":time, "rating":raiting, "url":url.encode('utf-8')})
 
 
 fiberList = []
@@ -291,7 +296,7 @@ def ingred_combination(ListArr, Num, exclude):
 
     combs = d.most_common()
 
-    ingredcnts = [x[1] for x in combs[:10]]#    list(map(lambda x: x[1], combs[:10]))
+    ingredcnts = [x[1] for x in combs[:20]]#    list(map(lambda x: x[1], combs[:10]))
     print(["{:10.2f}".format(x / max(ingredcnts)) for x in ingredcnts])
 
     return combs
@@ -317,33 +322,57 @@ def writeCombResult(fname, comb):
         writer.writeheader()
         for ingred in comb:
             s = " - ".join(ingred[0])
-            writer.writerow({"ingred": s, "number": ingred[1]})
+            writer.writerow({"ingred": s.encode('utf-8'), "number": ingred[1]})
+
+def draw_combs(fname, comb, name):
+    x_axis = []
+    y_axis = []
+    for c in comb[:10]:
+        x_axis.append('+'.join([str(s) for s in c[0]]))
+        y_axis.append(str(c[1]))
+    fig, ax = plt.subplots()
+    fig.canvas.draw()
+    ax.bar(np.arange(len(y_axis)), y_axis)
+    ax.set_xticks(np.arange(len(x_axis)))
+    ax.set_xticklabels(x_axis, rotation='vertical')
+    plt.xlabel('The number of the smoothie recipes')
+    plt.ylabel('Ingredients')
+    plt.title(name)
+    plt.tight_layout()
+    #fig.subplots_adjust(bottom=0.45)
+    # plt.show()
+    plt.savefig("../out/{0}.png".format(fname))
 
 
 ingredcomb = ingred_combination(ingredListsPerRecipe, 1, [])
 writeCombResult("single.csv", ingredcomb)
 write_comb("single.txt", ingredcomb)
-
+draw_combs("single", ingredcomb, "The Most Preferred Single Ingredients")
 
 ingredcomb = ingred_combination(ingredListsPerRecipe, 2, [])
 writeCombResult("duple.csv", ingredcomb)
 write_comb("duple.txt", ingredcomb)
+draw_combs("double", ingredcomb, "The Most Preferred Ingredient Paring")
 
 ingredcomb = ingred_combination(ingredListsPerRecipe, 3, [])
 writeCombResult("triple.csv", ingredcomb)
 write_comb("triple.txt", ingredcomb)
+draw_combs("triple", ingredcomb, "The Most Preferred Ingredient Combination of 3")
 
-ingredcomb = ingred_combination(ingredListsPerRecipe, 1, ["banana","ice","water","honey"])
+ingredcomb = ingred_combination(ingredListsPerRecipe, 1, ["banana","ice","yogurt"])
 writeCombResult("single_ex.csv", ingredcomb)
 write_comb("single_ex.txt", ingredcomb)
+draw_combs("single_ex", ingredcomb, "The Most Preferred Single Ingredients (without banana, ice and yogurt)")
 
-ingredcomb = ingred_combination(ingredListsPerRecipe, 2, ["banana","ice","water","honey"])
+ingredcomb = ingred_combination(ingredListsPerRecipe, 2, ["banana","ice","yogurt"])
 writeCombResult("duple_ex.csv", ingredcomb)
 write_comb("duple_ex.txt", ingredcomb)
+draw_combs("duple_ex", ingredcomb, "The Most Preferred Ingredient Paring (without banana, ice and yogurt)")
 
-ingredcomb = ingred_combination(ingredListsPerRecipe, 3, ["banana","ice","water","honey"])
+ingredcomb = ingred_combination(ingredListsPerRecipe, 3, ["banana","ice","yogurt"])
 writeCombResult("triple_ex.csv", ingredcomb)
 write_comb("triple_ex.txt", ingredcomb)
+draw_combs("triple_ex", ingredcomb, "The Most Preferred Ingredient Combination of 3 (without banana, ice and yogurt)")
 
 #ingredcomb = ingred_combination(ingredListsPerRecipe, 4)
 #write_comb("quad.txt", ingredcomb)
