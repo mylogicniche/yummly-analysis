@@ -2,8 +2,8 @@ import client
 import sqlite3
 import time
 
-YOUR_API_ID = '1cdcf1a9'
-YOUR_API_KEY = 'aa6f2e82587a6f95d0d155640537c26c'
+YOUR_API_ID = ''
+YOUR_API_KEY = ''
 
 ddl_recipe = 'INSERT INTO recipes VALUES (?,?,?,?,?,?,?)'
 ddl_nutrition = 'INSERT INTO nutrition VALUES (?,?,?,?,?)'
